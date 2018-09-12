@@ -290,11 +290,11 @@ A namespace is a unique name to identify your private image registry.
 Replace <my_namespace> with your preferred namespace.
 
 ```console
-ibmcloud cr namespace-add <my_namespace>
+$ ibmcloud cr namespace-add <my_namespace>
 ```
 
 The created registry name has the format `registry.<region>.bluemix.net/<your_namespace>`
-where `<region>` upon the region where your IBM Cloud account was created.
+where `<region>` depends upon the region where your IBM Cloud account was created.
 You can find this out by running the `ibmcloud cr region` command.
 
 ```console
