@@ -1,5 +1,6 @@
 # Developing a Kubernetes Application with Local and Remote Clusters
 
+As a developer you want to be able to rapidly iterate on your application source code locally while still mirroring a remote production environment as closely as possible.
 This tutorial describes how to deploy a Kubernetes application locally using Minikube and then how to deploy it to the Kubernetes Service on the IBM Cloud.
 
 # Objectives
@@ -16,16 +17,22 @@ Before you begin, you need to install the required CLIs to create and manage you
 IBM provides an installer [here](https://clis.ng.bluemix.net/ui/home.html) to get all of these tools together.  There are instructions for how to
 obtain the tools manually if desired.  The following tools are used in this tutorial.
 * git
+   ** git is a version control system which we'll use to obtain the source of a sample application.
 * Docker
+   ** Docker is a tool that allows developers to build and run anapplication as a lightweight, portable container.
 * kubectl CLI
+   ** `kubectl` is a command line interface for running commands against Kubernetes clusters.
 * ibmcloud CLI
+   ** `ibmcloud` is a command line interface for managing resources in IBM Cloud.
 
 # Download the Sample Application
-This tutorial uses the guestbook application.  You should clone it to your workstation since you will be building it locally.
+The application shown in this tutorial is a simple guestbook website where users can post messages.  You should clone it to your workstation since you will be building it locally.
 
 ```console
 $ git clone https://github.com/IBM/guestbook.git
 ```
+
+For the purposes of this tutorial the application is run without a backing database (i.e. data is stored in-memory).
 
 # Deploying the application to a local cluster using Minikube
 
