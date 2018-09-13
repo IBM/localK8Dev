@@ -36,6 +36,8 @@ For the purposes of this tutorial the application is run without a backing datab
 
 # Deploying the application to a local cluster using Minikube
 
+Minikube is a tool that makes it easy to run Kubernetes locally. Minikube runs a single-node Kubernetes cluster inside a VM on your workstation.
+
 ## Installing Minikube
 
 Follow the instructions [here](https://kubernetes.io/docs/tasks/tools/install-minikube/) to install Minikube on your workstation.
