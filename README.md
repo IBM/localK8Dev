@@ -17,13 +17,13 @@ Before you begin, you need to install the required CLIs to create and manage you
 IBM provides an installer [here](https://clis.ng.bluemix.net/ui/home.html) to get all of these tools together.  There are instructions for how to
 obtain the tools manually if desired.  The following tools are used in this tutorial.
 * git
-   ** git is a version control system which we'll use to obtain the source of a sample application.
+   * git is a version control system which we'll use to obtain the source of a sample application.
 * Docker
-   ** Docker is a tool that allows developers to build and run anapplication as a lightweight, portable container.
+   * Docker is a tool that allows developers to build and run anapplication as a lightweight, portable container.
 * kubectl CLI
-   ** `kubectl` is a command line interface for running commands against Kubernetes clusters.
+   * `kubectl` is a command line interface for running commands against Kubernetes clusters.
 * ibmcloud CLI
-   ** `ibmcloud` is a command line interface for managing resources in IBM Cloud.
+   * `ibmcloud` is a command line interface for managing resources in IBM Cloud.
 
 # Download the Sample Application
 The application shown in this tutorial is a simple guestbook website where users can post messages.  You should clone it to your workstation since you will be building it locally.
