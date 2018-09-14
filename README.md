@@ -324,7 +324,7 @@ $ docker push registry.<region>.bluemix.net/<my_namespace>/guestbook:v1.1
 To run the application we use the same `kubectl run` command as before except now we refer to the image in the private repository.
 
 ```console
-$ kubectl run guestbook --image=registry.<region>.bluemix.net/<my_namespace>/guestbook:v1
+$ kubectl run guestbook --image=registry.<region>.bluemix.net/<my_namespace>/guestbook:v1.1
 deployment.apps/guestbook created
 ```
 
