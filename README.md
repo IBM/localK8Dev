@@ -1,12 +1,15 @@
 # Developing a Kubernetes Application with Local and Remote Clusters
 
 As a developer you want to be able to rapidly iterate on your application source code locally while still mirroring a remote production environment as closely as possible.
-This tutorial describes how to deploy a Kubernetes application locally using Minikube and then how to deploy it to the Kubernetes Service on the IBM Cloud.
+This tutorial describes how to set up a single-node Kubernetes cluster locally using Minikube and deploy an application to it and then do the same steps with the IBM Kubernetes Service on the IBM Cloud.
+It then describes how to set up a multi-node cluster locally using kubeadm-dind-cluster and remotely with the IBM Kubernetes Service.
 
 # Objectives
 
 Learn how to perform the following tasks.
-* Create a local cluster using Minikube and a remote cluster using IBM Cloud Kubernetes Service.
+* Create a local single-node cluster using Minikube.
+* Create a local multi-node cluster using kubeadm-dind-cluster.
+* Create remote single-node and multi-node clusters using IBM Cloud Kubernetes Service.
 * Make images available to your local and remote clusters.
 * Access your running application in your local and remote clusters.
 * Modify and re-deploy your application.
@@ -66,7 +69,7 @@ Starting cluster components...
 Kubectl is now configured to use the cluster.
 Loading cached images from config file.
 ```
- 
+
 minikube configures the kubectl CLI to work with this cluster.  You can verify that by entering a `kubectl` command.
 
 ```console
@@ -75,7 +78,7 @@ NAME       STATUS    ROLES     AGE       VERSION
 minikube   Ready     master     1m       v1.10.0
 ```
 
-If you are working with other Kubenetes clusters and change your kubectl CLI context to use another cluster, 
+If you are working with other Kubenetes clusters and change your kubectl CLI context to use another cluster,
 you can restore the minikube context by using the command `kubectl config use-context minikube`.
 
 ## Deploying the application to your local cluster
@@ -246,7 +249,7 @@ Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
 ibmcloud login
 ```
 
-Note: If you have a federated ID, use `ibmcloud login --sso` to log in to the IBM Cloud CLI. 
+Note: If you have a federated ID, use `ibmcloud login --sso` to log in to the IBM Cloud CLI.
 
 ## Creating a cluster
 
@@ -268,7 +271,7 @@ mycluster   ae7148d3c8e74d69b3ed94b6c5f02262   normal    4 minutes ago   1      
 ```
 
 If the cluster state is `pending`, wait for a moment and try the command again.
-Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.  
+Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.
 Run `ibmcloud ks cluster-config mycluster` which will create a config file on your workstation.
 
 ```console
@@ -294,8 +297,8 @@ NAME            STATUS    ROLES     AGE       VERSION
 In order for Kubernetes to pull images to run in the cluster, the images need to be stored in an accessible registry.
 You can use the IBM Cloud Container Service to push docker images to your own private registry.
 
-First add a namespace to create your own image repository. 
-A namespace is a unique name to identify your private image registry. 
+First add a namespace to create your own image repository.
+A namespace is a unique name to identify your private image registry.
 Replace <my_namespace> with your preferred namespace.
 
 ```console
@@ -399,7 +402,7 @@ It uses "Docker in Docker" to simulate multiple Kubernetes nodes in a single mac
 
 ## Installing kubeadm-dind-cluster
 
-kubeadm-dind-cluster is written to run in Linux.  If you have a Windows or Mac workstation, you need to set up a 
+kubeadm-dind-cluster is written to run in Linux.  If you have a Windows or Mac workstation, you need to set up a
 virtual machine running Linux.  The recommended approach is to use
 [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and run an
 [Ubuntu](https://www.ubuntu.com/download/desktop) guest virtual machine.
@@ -415,10 +418,10 @@ wget https://cdn.rawgit.com/kubernetes-sigs/kubeadm-dind-cluster/master/fixed/di
 
 ## Creating a cluster
 
-Start a cluster by running the `dind-cluster-v1.8.sh` script with the `up` option.
+Start a cluster by running the `dind-cluster-v1.10.sh` script with the `up` option.
 
 ```console
-./dind-cluster-v1.8.sh up
+./dind-cluster-v1.10.sh up
 ```
 
 By default the script creates a Kubernetes master node and two worker nodes.
@@ -446,11 +449,6 @@ It makes more sense to work within the Kubernetes model and use a registry.)
 
 Let's see how to set up the cluster to use the private registry created using the IBM Cloud Container Service.
 In the preceding section you learned how to create your own image repository using the `ibmcloud` CLI.
-
-```console
-$ ibmcloud cr namespace-add <my_namespace>
-```
-
 Now you need to use the ibmcloud CLI to create a token to grant access to your IBM Cloud Container Registry namespaces.
 
 ```console
@@ -465,22 +463,21 @@ This creates a non-expiring token that has read and write access to all namespac
 The actual token appears in place of `<token_value>`.
 Every user in possession of this token can push and pull images to and from your namespaces.
 
-Next create a Kubernetes secret to hold the token value.  
+Next create a Kubernetes secret to hold the token value.
 Secrets are intended to hold sensitive information.
 You will need to substitute the following values into this command:
-* <region>
+* \<region>
     * You can find this out by running the `ibmcloud cr region` command.
 
-      ```console
-      $ ibmcloud cr region
-      You are targeting region 'us-south', the registry is 'registry.ng.bluemix.net'.
-
-      OK
-      ```
-      In this case you would substitute `ng` into the registry address.
-* <token_value>
+    ```console
+    $ ibmcloud cr region
+    You are targeting region 'us-south', the registry is 'registry.ng.bluemix.net'.
+    OK
+    ```
+    In this case you would substitute `ng` into the registry address.
+* \<token_value>
     * This is the `<token_value>` that was output when you created the registry token above.
-* <email>
+* \<email>
     * You can provide any email address.  This argument is required by this `kubectl` command but is not used for anything.
 
 ```console
@@ -489,8 +486,8 @@ secret "registrysecret" created
 ```
 
 Finally we need to have Kubernetes use this secret when pulling images.  The easiest way to do so is to add this secret
-to the default Kubernetes service account.  A service account represents an identity for processes that run in a pod. 
-If a pod doesn’t have an assigned service account, it uses the default service account.
+to the default Kubernetes service account.  A service account represents an identity for processes that run in a pod.
+If a pod doesn't have an assigned service account, it uses the default service account.
 
 ```console
 kubectl patch -n default serviceaccount/default -p '{"imagePullSecrets":[{"name": "registrysecret"}]}'
@@ -521,7 +518,7 @@ Get the IP address as follows:
 
 ```console
 $ docker exec -it kube-node-1 ip addr show eth0
-15: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+15: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
     link/ether 02:42:ac:12:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
     inet 172.18.0.3/16 brd 172.18.255.255 scope global eth0
        valid_lft forever preferred_lft forever
@@ -572,7 +569,7 @@ Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
 ibmcloud login
 ```
 
-Note: If you have a federated ID, use `ibmcloud login --sso` to log in to the IBM Cloud CLI. 
+Note: If you have a federated ID, use `ibmcloud login --sso` to log in to the IBM Cloud CLI.
 
 ## Creating a cluster
 
@@ -597,7 +594,7 @@ myStandardCluster   fc5514ef25ac44da9924ff2309020bb3   normal    12 minutes ago 
 ```
 
 If the cluster state is `pending`, wait for a moment and try the command again.
-Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.  
+Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.
 Run `ibmcloud ks cluster-config mycluster` which will create a config file on your workstation.
 
 ```console
