@@ -34,7 +34,7 @@ $ git clone https://github.com/IBM/guestbook.git
 
 For the purposes of this tutorial the application is run without a backing database (i.e. data is stored in-memory).
 
-# Deploying the application to a local cluster using Minikube
+# Deploying the application to a local single-node cluster using Minikube
 
 Minikube is a tool that makes it easy to run Kubernetes locally. Minikube runs a single-node Kubernetes cluster inside a VM on your workstation.
 
@@ -234,11 +234,11 @@ Try entering something in the form and clicking submit.
 You should see the text you entered followed by the current time appear on the page.
 
 
-# Deploying the application to a remote cluster using IBM Cloud Kubernetes Service
+# Deploying the application to a remote single-node cluster using IBM Cloud Kubernetes Service
 
 Let's now look at continuing our application development on the IBM Cloud.
 If you have not already registered for an IBM Cloud account, do so [here](https://console.bluemix.net/registration/).
-The steps in this tutorial can be done with a free account.
+The steps in this section can be done with a free account.  (The cluster that you create will expire after one month.)
 
 Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
 
@@ -313,6 +313,13 @@ You are targeting region 'us-south', the registry is 'registry.ng.bluemix.net'.
 OK
 ```
 
+Before we can push an image into the registry, we need to run the `ibmcloud cr login` command
+to log your local Docker daemon into IBM Cloud Container Registry.
+
+```console
+ibmcloud cr login
+```
+
 We can now tag our current local image (which we built previously while deploying to minikube) to associate it with the private registry
 and push it to the registry.  Be sure to substitute `<region>` and `<my_namespace>` with the proper values.
 
@@ -360,7 +367,6 @@ kube-hou02-paae7148d3c8e74d69b3ed94b6c5f02262-w1   173.193.75.82   10.76.202.250
 
 In this case the public IP is 173.193.75.82.
 
-
 Get the node port number as follows:
 
 ```console
@@ -383,4 +389,302 @@ Events:                   <none>
 
 In this case the NodePort is 32146.
 
-So in this case the application can be accessed from a brower using the URL `http://173.193.75.82:32146/`.
+So in this case the application can be accessed from a browser using the URL `http://173.193.75.82:32146/`.
+
+
+# Deploying the application to a local multi-node cluster using kubeadm-dind-cluster
+
+We are going to use the GitHub project `kubernetes-sigs/kubeadm-dind-cluster` to set up a multi-node Kubernetes cluster.
+It uses "Docker in Docker" to simulate multiple Kubernetes nodes in a single machine environment.
+
+## Installing kubeadm-dind-cluster
+
+kubeadm-dind-cluster is written to run in Linux.  If you have a Windows or Mac workstation, you need to set up a 
+virtual machine running Linux.  The recommended approach is to use
+[VirtualBox](https://www.virtualbox.org/wiki/Downloads) and run an
+[Ubuntu](https://www.ubuntu.com/download/desktop) guest virtual machine.
+
+You also need to install [Docker](https://docs.docker.com/install/) if you do not already have it.
+
+kubeadm-dind-cluster provides preconfigured scripts to set up Kubernetes clusters at various version levels.
+For this tutorial we'll use the `dind-cluster-v1.10.sh` script.  Obtain the script as follows.
+
+```console
+wget https://cdn.rawgit.com/kubernetes-sigs/kubeadm-dind-cluster/master/fixed/dind-cluster-v1.10.sh
+```
+
+## Creating a cluster
+
+Start a cluster by running the `dind-cluster-v1.8.sh` script with the `up` option.
+
+```console
+./dind-cluster-v1.8.sh up
+```
+
+By default the script creates a Kubernetes master node and two worker nodes.
+Each node is running inside a separate Docker container.
+
+The script configures the kubectl CLI to work with this cluster.
+You first have to add the kubectl CLI to your path.
+Then you can verify your cluster nodes by entering the `kubectl get nodes` command.
+
+```console
+$ export PATH="$HOME/.kubeadm-dind-cluster:$PATH"
+$ kubectl get nodes
+NAME          STATUS    ROLES     AGE       VERSION
+kube-master   Ready     master    5m        v1.10.5
+kube-node-1   Ready     <none>    3m        v1.10.5
+kube-node-2   Ready     <none>    4m        v1.10.5
+```
+
+## Deploying the application to your cluster
+
+The Kubernetes cluster needs to be able to pull images from somewhere to run in the cluster.
+(With minikube we could point the Docker CLI to the minikube's docker daemon and avoid the need
+for a registry.  However we now have multiple docker daemons running nested within docker containers.
+It makes more sense to work within the Kubernetes model and use a registry.)
+
+Let's see how to set up the cluster to use the private registry created using the IBM Cloud Container Service.
+In the preceding section you learned how to create your own image repository using the `ibmcloud` CLI.
+
+```console
+$ ibmcloud cr namespace-add <my_namespace>
+```
+
+Now you need to use the ibmcloud CLI to create a token to grant access to your IBM Cloud Container Registry namespaces.
+
+```console
+$ ibmcloud cr token-add --description "token for kubeadm dind cluster access" --non-expiring --readwrite
+Requesting a registry token...
+
+Token identifier   58669dd6-3ddd-5c78-99f9-ad0a5aabd9ad
+Token              <token_value>
+```
+
+This creates a non-expiring token that has read and write access to all namespaces.
+The actual token appears in place of `<token_value>`.
+Every user in possession of this token can push and pull images to and from your namespaces.
+
+Next create a Kubernetes secret to hold the token value.  
+Secrets are intended to hold sensitive information.
+You will need to substitute the following values into this command:
+* <region>
+    * You can find this out by running the `ibmcloud cr region` command.
+
+      ```console
+      $ ibmcloud cr region
+      You are targeting region 'us-south', the registry is 'registry.ng.bluemix.net'.
+
+      OK
+      ```
+      In this case you would substitute `ng` into the registry address.
+* <token_value>
+    * This is the `<token_value>` that was output when you created the registry token above.
+* <email>
+    * You can provide any email address.  This argument is required by this `kubectl` command but is not used for anything.
+
+```console
+$ kubectl --namespace default create secret docker-registry registrysecret --docker-server=registry.<region>.bluemix.net --docker-username=token --docker-password=<token_value> --docker-email=<email>
+secret "registrysecret" created
+```
+
+Finally we need to have Kubernetes use this secret when pulling images.  The easiest way to do so is to add this secret
+to the default Kubernetes service account.  A service account represents an identity for processes that run in a pod. 
+If a pod doesn’t have an assigned service account, it uses the default service account.
+
+```console
+kubectl patch -n default serviceaccount/default -p '{"imagePullSecrets":[{"name": "registrysecret"}]}'
+```
+
+This command tells Kubernetes to use the `registrysecret` that you created to authenticate with your private registry
+when it needs to pull an image.  Let's try it now.
+
+```console
+$ kubectl run guestbook --image=registry.<region>.bluemix.net/<my_namespace>/guestbook:v1.1
+deployment.apps/guestbook created
+```
+
+## Accessing the running application
+
+In order to make the application accessible we need to create a service for it.
+The guestbook application listens on port 3000.
+
+```console
+$ kubectl expose deployment guestbook --type=NodePort --port=3000
+service/guestbook exposed
+```
+
+In order to access the service, we need to know the IP address of one of the worker nodes
+and the node port number that Kubernetes assigned to the service.
+
+Get the IP address as follows:
+
+```console
+$ docker exec -it kube-node-1 ip addr show eth0
+15: eth0@if16: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:12:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.18.0.3/16 brd 172.18.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+```
+
+This command displays the eth0 interface in the `kube-node-1` container.
+The container's IP address appears following `inet` and in this case is 172.18.0.3.
+
+Get the node port number as follows:
+
+```console
+$ kubectl describe services/guestbook
+Name:                     guestbook
+Namespace:                default
+Labels:                   run=guestbook
+Annotations:              <none>
+Selector:                 run=guestbook
+Type:                     NodePort
+IP:                       10.100.222.15
+Port:                     <unset>  3000/TCP
+TargetPort:               3000/TCP
+NodePort:                 <unset>  32345/TCP
+Endpoints:                10.244.2.3:3000
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```
+
+In this case the NodePort is 32345.
+
+So in this case the application can be accessed from a browser running on the Linux host
+using the URL `http://172.18.0.3:32345/`.
+Note that although we are using the IP address of kube-node-1, the application does not need
+to be running on that node for this URL to work.  Each node proxies the NodePort
+into the Service.
+
+
+# Deploying the application to a remote multi-node cluster using IBM Cloud Kubernetes Service
+
+Let's now look at continuing our application development on a multi-node cluster in the IBM Cloud.
+
+In order to create a multi-node cluster you must have either a Pay-As-You-Go or a Subscription account.
+See https://console.bluemix.net/docs/account/index.html#accounts for furhter information about account types.
+
+Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
+
+```console
+ibmcloud login
+```
+
+Note: If you have a federated ID, use `ibmcloud login --sso` to log in to the IBM Cloud CLI. 
+
+## Creating a cluster
+
+It is recommended to use the [IBM Cloud dashboard](https://console.bluemix.net/catalog/) to create a standard cluster because it will help guide you through
+the configuration options and it will show you the estimated cost.
+* Click the login button in the upper right and follow the login prompts to log into your account.
+* Click the `Containers` tab on the left side of the window and then select the "Kubernetes Service" tile.
+* Click the `Create` button.
+* Fill in the form that appears.  First select a location for your cluster as this will dictate the other options.
+Then choose a zone within the location and a machine type.  Set the number of worker nodes to 2.
+Give a name to your cluster; for this tutorial we'll use "myStandardCluster".
+* Review the cost estimate on the right side of the window.
+* Click the `Create Cluster` button.
+
+
+Cluster creation continues in the background.  You can check the status as follows.
+```console
+$ ibmcloud ks clusters
+OK
+Name                ID                                 State     Created          Workers   Location    Version
+myStandardCluster   fc5514ef25ac44da9924ff2309020bb3   normal    12 minutes ago   2         Dallas     1.10.7_1520
+```
+
+If the cluster state is `pending`, wait for a moment and try the command again.
+Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.  
+Run `ibmcloud ks cluster-config mycluster` which will create a config file on your workstation.
+
+```console
+$ ibmcloud ks cluster-config myStandardCluster
+OK
+The configuration for mycluster was downloaded successfully. Export environment
+variables to start using Kubernetes.
+
+export KUBECONFIG=/C/Users/IBM_ADMIN/.bluemix/plugins/container-service/clusters/myStandardCluster/kube-config-hou02-myStandardCluster.yml
+```
+
+Copy the `export` statement and run it.  This sets the `KUBECONFIG` environment variable to point to the kubectl config file.
+This will make your `kubectl` client work with your new Kubernetes cluster.  You can verify that by entering a `kubectl` command.
+
+```console
+$ kubectl get nodes
+NAME            STATUS    ROLES     AGE       VERSION
+10.177.184.185   Ready     <none>    2m        v1.10.7+IKS
+10.177.184.220   Ready     <none>    2m        v1.10.7+IKS
+```
+
+## Deploying the application to your remote cluster
+
+Let's continue to use the application that was pushed into the private registry.
+Your new cluster automatically has access to this registry.
+Note that if you created your registry under the trial or Lite plan, it remains under that plan and is subject to certain quotas.
+See this [page](https://console.bluemix.net/docs/services/Registry/registry_overview.html) for more information about registry quotas
+and how to upgrade the registry service plan.
+
+```console
+$ kubectl run guestbook --image=registry.<region>.bluemix.net/<my_namespace>/guestbook:v1.1
+deployment.apps/guestbook created
+```
+
+We can use kubectl to verify that Kubernetes created a pod containing our container and that it's running.
+
+```console
+$ kubectl get pods
+NAME                         READY     STATUS    RESTARTS   AGE
+guestbook-7b9f8cf696-fg8v8   1/1       Running   0          1m
+```
+
+## Accessing the running application
+
+In order to make the application accessible we need to create a service for it.
+The guestbook application listens on port 3000.
+
+```console
+$ kubectl expose deployment guestbook --type=NodePort --port=3000
+service/guestbook exposed
+```
+
+In order to access the service, we need to know the IP address of one of the worker nodes
+and the node port number that Kubernetes assigned to the service.
+
+Get the IP address as follows:
+
+```console
+$ ibmcloud ks workers myStandardCluster
+OK
+ID                                                 Public IP        Private IP       Machine Type        State    Status   Zone    Version
+kube-dal10-crfc5514ef25ac44da9924ff2309020bb3-w1   169.47.252.42    10.177.184.220   u2c.2x4.encrypted   normal   Ready    dal10   1.10.7_1520
+kube-dal10-crfc5514ef25ac44da9924ff2309020bb3-w2   169.48.165.242   10.177.184.185   u2c.2x4.encrypted   normal   Ready    dal10   1.10.7_1520
+```
+
+You can use the public IP address of either node.  Each node proxies the NodePort into the Service.
+
+Get the node port number as follows:
+
+```console
+$ kubectl describe services/guestbook
+Name:                     guestbook
+Namespace:                default
+Labels:                   run=guestbook
+Annotations:              <none>
+Selector:                 run=guestbook
+Type:                     NodePort
+IP:                       172.21.210.103
+Port:                     <unset>  3000/TCP
+TargetPort:               3000/TCP
+NodePort:                 <unset>  31096/TCP
+Endpoints:                172.30.108.133:3000
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```
+
+In this case the NodePort is 31096.
+
+So in this case the application can be accessed from a browser using the URL `http://169.47.252.42:31096/` or `http://169.48.165.242:31096`.
