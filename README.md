@@ -37,7 +37,7 @@ $ git clone https://github.com/IBM/guestbook.git
 
 For the purposes of this tutorial the application is run without a backing database (i.e. data is stored in-memory).
 
-# Deploying the application to a local single-node cluster using Minikube
+# Setting up a local single-node cluster using Minikube
 
 Minikube is a tool that makes it easy to run Kubernetes locally. Minikube runs a single-node Kubernetes cluster inside a VM on your workstation.
 
@@ -178,15 +178,16 @@ guestbook-6cd549c68f-d6qvw   1/1       Running   0          1m
 
 ## Accessing the running application
 
-In order to make the application accessible we need to create a service for it.
-The guestbook application listens on port 3000.
+The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+and the node will proxy that port to the pod's target port.
 
 ```console
 $ kubectl expose deployment guestbook --type=NodePort --port=3000
 service/guestbook exposed
 ```
 
-In order to access the service, we need to know the IP address of the virtual machine and the node port number.
+In order to access the service, we need to know the IP address of Minikube's virtual machine and the node port number.
 Minikube provides a convenient way for getting this information.
 
 ```console
@@ -237,11 +238,11 @@ Try entering something in the form and clicking submit.
 You should see the text you entered followed by the current time appear on the page.
 
 
-# Deploying the application to a remote single-node cluster using IBM Cloud Kubernetes Service
+# Setting up a remote single-node cluster using IBM Cloud Kubernetes Service
 
 Let's now look at continuing our application development on the IBM Cloud.
 If you have not already registered for an IBM Cloud account, do so [here](https://console.bluemix.net/registration/).
-The steps in this section can be done with a free account.  (The cluster that you create will expire after one month.)
+The steps in this section can be done with a free Lite account.  (The cluster that you create will expire after one month.)
 
 Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
 
@@ -293,6 +294,7 @@ NAME            STATUS    ROLES     AGE       VERSION
 ```
 
 ## Deploying the application to your remote cluster
+<a id="create-registry"></a>
 
 In order for Kubernetes to pull images to run in the cluster, the images need to be stored in an accessible registry.
 You can use the IBM Cloud Container Service to push docker images to your own private registry.
@@ -323,6 +325,7 @@ to log your local Docker daemon into IBM Cloud Container Registry.
 ibmcloud cr login
 ```
 
+<a id="push-registry"></a>
 We can now tag our current local image (which we built previously while deploying to minikube) to associate it with the private registry
 and push it to the registry.  Be sure to substitute `<region>` and `<my_namespace>` with the proper values.
 
@@ -348,8 +351,9 @@ guestbook-5986549d9-2f49g    1/1       Running   0          1m
 
 ## Accessing the running application
 
-In order to make the application accessible we need to create a service for it.
-The guestbook application listens on port 3000.
+The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+and the node will proxy that port to the pod's target port.
 
 ```console
 $ kubectl expose deployment guestbook --type=NodePort --port=3000
@@ -395,9 +399,10 @@ In this case the NodePort is 32146.
 So in this case the application can be accessed from a browser using the URL `http://173.193.75.82:32146/`.
 
 
-# Deploying the application to a local multi-node cluster using kubeadm-dind-cluster
+# Setting up a local multi-node cluster using kubeadm-dind-cluster
 
-We are going to use the GitHub project `kubernetes-sigs/kubeadm-dind-cluster` to set up a multi-node Kubernetes cluster.
+More advanced application development may require a multi-node cluster.
+We are going to use the project `kubernetes-sigs/kubeadm-dind-cluster` to set up a multi-node Kubernetes cluster.
 It uses "Docker in Docker" to simulate multiple Kubernetes nodes in a single machine environment.
 
 ## Installing kubeadm-dind-cluster
@@ -406,8 +411,7 @@ kubeadm-dind-cluster is written to run in Linux.  If you have a Windows or Mac w
 virtual machine running Linux.  The recommended approach is to use
 [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and run an
 [Ubuntu](https://www.ubuntu.com/download/desktop) guest virtual machine.
-
-You also need to install [Docker](https://docs.docker.com/install/) if you do not already have it.
+You also need to install [Docker](https://docs.docker.com/install/) in the guest virtual machine.
 
 kubeadm-dind-cluster provides preconfigured scripts to set up Kubernetes clusters at various version levels.
 For this tutorial we'll use the `dind-cluster-v1.10.sh` script.  Obtain the script as follows.
@@ -448,7 +452,7 @@ for a registry.  However we now have multiple docker daemons running nested with
 It makes more sense to work within the Kubernetes model and use a registry.)
 
 Let's see how to set up the cluster to use the private registry created using the IBM Cloud Container Service.
-In the preceding section you learned how to create your own image repository using the `ibmcloud` CLI.
+Earlier you learned [how to create your own image repository using the `ibmcloud` CLI](#create-registry).
 Now you need to use the ibmcloud CLI to create a token to grant access to your IBM Cloud Container Registry namespaces.
 
 ```console
@@ -501,10 +505,19 @@ $ kubectl run guestbook --image=registry.<region>.bluemix.net/<my_namespace>/gue
 deployment.apps/guestbook created
 ```
 
+Use kubectl to verify that Kubernetes created a pod containing our container and that it's running.
+
+```console
+$ kubectl get pods
+NAME                         READY     STATUS    RESTARTS   AGE
+guestbook-5986549d9-h5n74    1/1       Running   0          1m
+```
+
 ## Accessing the running application
 
-In order to make the application accessible we need to create a service for it.
-The guestbook application listens on port 3000.
+The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+and the node will proxy that port to the pod's target port.
 
 ```console
 $ kubectl expose deployment guestbook --type=NodePort --port=3000
@@ -556,12 +569,12 @@ to be running on that node for this URL to work.  Each node proxies the NodePort
 into the Service.
 
 
-# Deploying the application to a remote multi-node cluster using IBM Cloud Kubernetes Service
+# Setting up a remote multi-node cluster using IBM Cloud Kubernetes Service
 
 Let's now look at continuing our application development on a multi-node cluster in the IBM Cloud.
 
-In order to create a multi-node cluster you must have either a Pay-As-You-Go or a Subscription account.
-See https://console.bluemix.net/docs/account/index.html#accounts for furhter information about account types.
+In order to create a multi-node cluster (referred to as a standard cluster) you must have either a Pay-As-You-Go or a Subscription account.
+See https://console.bluemix.net/docs/account/index.html#accounts for further information about account types.
 
 Log in to the IBM Cloud CLI and enter your IBM Cloud credentials when prompted.
 
@@ -618,7 +631,7 @@ NAME            STATUS    ROLES     AGE       VERSION
 
 ## Deploying the application to your remote cluster
 
-Let's continue to use the application that was pushed into the private registry.
+Let's continue to use the guestbook application that we [pushed into a private registry](#push-registry).
 Your new cluster automatically has access to this registry.
 Note that if you created your registry under the trial or Lite plan, it remains under that plan and is subject to certain quotas.
 See this [page](https://console.bluemix.net/docs/services/Registry/registry_overview.html) for more information about registry quotas
@@ -639,13 +652,17 @@ guestbook-7b9f8cf696-fg8v8   1/1       Running   0          1m
 
 ## Accessing the running application
 
-In order to make the application accessible we need to create a service for it.
-The guestbook application listens on port 3000.
+The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+and the node will proxy that port to the pod's target port.
 
 ```console
 $ kubectl expose deployment guestbook --type=NodePort --port=3000
 service/guestbook exposed
 ```
+
+(Note that with a standard cluster you can also make use of either a LoadBalancer service or an Ingress resource.
+These concepts are beyond the scope of this tutorial.)
 
 In order to access the service, we need to know the IP address of one of the worker nodes
 and the node port number that Kubernetes assigned to the service.
@@ -685,3 +702,44 @@ Events:                   <none>
 In this case the NodePort is 31096.
 
 So in this case the application can be accessed from a browser using the URL `http://169.47.252.42:31096/` or `http://169.48.165.242:31096`.
+
+# Cleaning up
+
+After you have completed the tutorial, if you no longer need the resources that you created then you can delete them.
+
+You can clean up the Kubernetes resources that you created in your clusters as follows.
+
+* Set the `kubectl` CLI context for the cluster that you want to clean up.
+
+  For minikube, use `kubectl config use-context minikube`.
+  
+  For IBM Kubernetes Service, use `ibmcloud ks cluster-config mycluster` or `ibmcloud ks cluster-config myStandardCluster` and copy and paste the
+  setting of the KUBECONFIG environment variable.
+
+* Delete the deployment and its service by entering the following commands.
+
+```console
+$ kubectl delete deployment guestbook
+$ kubectl delete service guestbook
+```
+
+To delete your minikube cluster, enter the following commands:
+
+```console
+$ minikube stop
+$ minikube delete
+```
+
+To delete your kubeadm-dind-cluster, enter the following commands:
+
+```console
+./dind-cluster-v1.10.sh down
+./dind-cluster-v1.10.sh clean
+```
+
+To delete your IBM Kubernetes Service clusters, enter the following commands:
+
+```console
+ibmcloud ks cluster-rm myCluster
+ibmcloud ks cluster-rm myStandardCluster
+```
