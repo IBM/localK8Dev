@@ -281,7 +281,7 @@ OK
 The configuration for mycluster was downloaded successfully. Export environment
 variables to start using Kubernetes.
 
-export KUBECONFIG=/C/Users/IBM_ADMIN/.bluemix/plugins/container-service/clusters/mycluster/kube-config-hou02-mycluster.yml
+export KUBECONFIG=/home/gregd/.bluemix/plugins/container-service/clusters/mycluster/kube-config-hou02-mycluster.yml
 ```
 
 Copy the `export` statement and run it.  This sets the `KUBECONFIG` environment variable to point to the kubectl config file.
@@ -447,9 +447,10 @@ kube-node-2   Ready     <none>    4m        v1.10.5
 ## Deploying the application to your cluster
 
 The Kubernetes cluster needs to be able to pull images from somewhere to run in the cluster.
-(With minikube we could point the Docker CLI to the minikube's docker daemon and avoid the need
-for a registry.  However we now have multiple docker daemons running nested within docker containers.
-It makes more sense to work within the Kubernetes model and use a registry.)
+With minikube we could point the Docker CLI to the minikube's docker daemon and avoid the need
+for a registry.  However we now have multiple docker daemons running nested within docker containers
+and synchronizing images across them is challenging and error-prone.
+It makes more sense to work within the Kubernetes model and use a registry.
 
 Let's see how to set up the cluster to use the private registry created using the IBM Cloud Container Service.
 Earlier you learned [how to create your own image repository using the `ibmcloud` CLI](#create-registry).
@@ -568,6 +569,45 @@ Note that although we are using the IP address of kube-node-1, the application d
 to be running on that node for this URL to work.  Each node proxies the NodePort
 into the Service.
 
+## Scaling the number of pods
+
+Of course the reason for having a cluster is to increase capacity and improve availability by placing copies of an
+application on multiple nodes.  Kubernetes calls these copies "replicas".  Let's tell Kubernetes that we want two replicas
+of the application.
+
+```console
+$ kubectl scale --replicas=2 deployment guestbook
+deployment.extensions "guestbook" scaled
+```
+
+Kubernetes works in the background to start an additional pod to make the total number of pods equal to 2.
+You can check the status of this by running the `kubectl get deployments` command.
+
+```console
+$ kubectl get deployments
+NAME        DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+guestbook   2         2         2            2           10m
+```
+
+You can also see the status of the pods and which nodes they are running on as follows.
+
+```console
+$ kubectl get pods -o wide
+NAME                        READY     STATUS    RESTARTS   AGE       IP           NODE
+guestbook-5986549d9-8dnhb   1/1       Running   0          7s        10.244.3.5   kube-node-2
+guestbook-5986549d9-qtnmg   1/1       Running   0          7s        10.244.2.5   kube-node-1
+```
+
+<a id="scale-exercise"></a>
+Once both pods are running, try the following exercise.  Open the application in a browser, enter a few messages, and close the browser.
+Repeat again a few times.  You will see the display of previous guest messages changes because the browser is
+connecting to one node or the other and the messages are kept in memory.  (You have to close the browser and
+re-open it to force a new connection, otherwise it will remain connected to the same node.)
+
+Of course a real guestbook application would keep the messages in a backing store.
+The [IBM Cloud Container Service Lab](https://github.com/IBM/kube101/tree/master/workshop)
+shows how to add a redis database to guestbook.
+
 
 # Setting up a remote multi-node cluster using IBM Cloud Kubernetes Service
 
@@ -616,7 +656,7 @@ OK
 The configuration for mycluster was downloaded successfully. Export environment
 variables to start using Kubernetes.
 
-export KUBECONFIG=/C/Users/IBM_ADMIN/.bluemix/plugins/container-service/clusters/myStandardCluster/kube-config-hou02-myStandardCluster.yml
+export KUBECONFIG=/home/gregd/.bluemix/plugins/container-service/clusters/myStandardCluster/kube-config-hou02-myStandardCluster.yml
 ```
 
 Copy the `export` statement and run it.  This sets the `KUBECONFIG` environment variable to point to the kubectl config file.
@@ -702,6 +742,35 @@ Events:                   <none>
 In this case the NodePort is 31096.
 
 So in this case the application can be accessed from a browser using the URL `http://169.47.252.42:31096/` or `http://169.48.165.242:31096`.
+
+## Scaling the number of pods
+
+We can tell Kubernetes that we want two replicas just as we did in the local multi-node cluster.
+
+```console
+$ kubectl scale --replicas=2 deployment guestbook
+deployment.extensions "guestbook" scaled
+```
+
+Kubernetes works in the background to start an additional pod to make the total number of pods equal to 2.
+You can check the status of this by running the `kubectl get deployments` command.
+
+```console
+$ kubectl get deployments
+NAME        DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+guestbook   2         2         2            2           10m
+```
+
+You can also see the status of the pods and which nodes they are running on as follows.
+
+```console
+$ kubectl get pods -o wide
+NAME                         READY     STATUS    RESTARTS   AGE       IP               NODE
+guestbook-7b9f8cf696-dzgcb   1/1       Running   0          14s       172.30.58.204    10.177.184.185
+guestbook-7b9f8cf696-hvrc7   1/1       Running   0          14s       172.30.108.136   10.177.184.220
+```
+
+You can repeat the previous [exercise](#scale-exercise) to connect to the pod running in each node.
 
 # Cleaning up
 
