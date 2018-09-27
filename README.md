@@ -22,7 +22,7 @@ obtain the tools manually if desired.  The following tools are used in this tuto
 * git
    * git is a version control system which we'll use to obtain the source of a sample application.
 * Docker
-   * Docker is a tool that allows developers to build and run anapplication as a lightweight, portable container.
+   * Docker is a tool that allows developers to build and run an application as a lightweight, portable container.
 * kubectl CLI
    * `kubectl` is a command line interface for running commands against Kubernetes clusters.
 * ibmcloud CLI
@@ -78,7 +78,7 @@ NAME       STATUS    ROLES     AGE       VERSION
 minikube   Ready     master     1m       v1.10.0
 ```
 
-If you are working with other Kubenetes clusters and change your kubectl CLI context to use another cluster,
+If you are working with other Kubernetes clusters and change your kubectl CLI context to use another cluster,
 you can restore the minikube context by using the command `kubectl config use-context minikube`.
 
 ## Deploying the application to your local cluster
@@ -178,8 +178,8 @@ guestbook-6cd549c68f-d6qvw   1/1       Running   0          1m
 
 ## Accessing the running application
 
-The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
-we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+The guestbook application listens on port `3000` inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range `30000-32767`
 and the node will proxy that port to the pod's target port.
 
 ```console
@@ -301,7 +301,7 @@ You can use the IBM Cloud Container Service to push docker images to your own pr
 
 First add a namespace to create your own image repository.
 A namespace is a unique name to identify your private image registry.
-Replace <my_namespace> with your preferred namespace.
+Replace `<my_namespace>` with your preferred namespace.
 
 ```console
 $ ibmcloud cr namespace-add <my_namespace>
@@ -351,8 +351,8 @@ guestbook-5986549d9-2f49g    1/1       Running   0          1m
 
 ## Accessing the running application
 
-The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
-we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+The guestbook application listens on port `3000` inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range `30000-32767`
 and the node will proxy that port to the pod's target port.
 
 ```console
@@ -372,7 +372,7 @@ ID                                                 Public IP       Private IP   
 kube-hou02-paae7148d3c8e74d69b3ed94b6c5f02262-w1   173.193.75.82   10.76.202.250 free           normal   Ready    hou02   1.10.7_1520
 ```
 
-In this case the public IP is 173.193.75.82.
+In this case the public IP is `173.193.75.82`.
 
 Get the node port number as follows:
 
@@ -394,7 +394,7 @@ External Traffic Policy:  Cluster
 Events:                   <none>
 ```
 
-In this case the NodePort is 32146.
+In this case the NodePort is `32146`.
 
 So in this case the application can be accessed from a browser using the URL `http://173.193.75.82:32146/`.
 
@@ -516,8 +516,8 @@ guestbook-5986549d9-h5n74    1/1       Running   0          1m
 
 ## Accessing the running application
 
-The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
-we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
+The guestbook application listens on port `3000` inside the pod.  In order to make the application externally accessible
+we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range `30000-32767`
 and the node will proxy that port to the pod's target port.
 
 ```console
@@ -539,7 +539,7 @@ $ docker exec -it kube-node-1 ip addr show eth0
 ```
 
 This command displays the eth0 interface in the `kube-node-1` container.
-The container's IP address appears following `inet` and in this case is 172.18.0.3.
+The container's IP address appears following `inet` and in this case is `172.18.0.3`.
 
 Get the node port number as follows:
 
@@ -692,7 +692,7 @@ guestbook-7b9f8cf696-fg8v8   1/1       Running   0          1m
 
 ## Accessing the running application
 
-The guestbook application listens on port 3000 inside the pod.  In order to make the application externally accessible
+The guestbook application listens on port `3000` inside the pod.  In order to make the application externally accessible
 we need to create a Kubernetes service of type NodePort for it.  Kubernetes will allocate a port in the range 30000-32767
 and the node will proxy that port to the pod's target port.
 
