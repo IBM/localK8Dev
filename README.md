@@ -648,7 +648,7 @@ myStandardCluster   fc5514ef25ac44da9924ff2309020bb3   normal    12 minutes ago 
 
 If the cluster state is `pending`, wait for a moment and try the command again.
 Once the cluster is provisioned (state is `normal`), the kubernetes client CLI `kubectl` needs to be configured to talk to the provisioned cluster.
-Run `ibmcloud ks cluster-config mycluster` which will create a config file on your workstation.
+Run `ibmcloud ks cluster-config myStandardCluster` which will create a config file on your workstation.
 
 ```console
 $ ibmcloud ks cluster-config myStandardCluster
