@@ -417,7 +417,7 @@ kubeadm-dind-cluster provides preconfigured scripts to set up Kubernetes cluster
 For this tutorial we'll use the `dind-cluster-v1.10.sh` script.  Obtain the script as follows.
 
 ```console
-wget https://cdn.rawgit.com/kubernetes-sigs/kubeadm-dind-cluster/master/fixed/dind-cluster-v1.10.sh
+wget https://github.com/kubernetes-sigs/kubeadm-dind-cluster/releases/download/v0.1.0/dind-cluster-v1.13.sh
 ```
 
 ## Creating a cluster
@@ -425,7 +425,7 @@ wget https://cdn.rawgit.com/kubernetes-sigs/kubeadm-dind-cluster/master/fixed/di
 Start a cluster by running the `dind-cluster-v1.10.sh` script with the `up` option.
 
 ```console
-./dind-cluster-v1.10.sh up
+./dind-cluster-v1.13.sh up
 ```
 
 By default the script creates a Kubernetes master node and two worker nodes.
